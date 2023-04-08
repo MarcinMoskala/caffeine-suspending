@@ -23,6 +23,18 @@ class SuspendingCacheTest {
         assertEquals("value", value2)
     }
 
+    fun `should throw exception when failed`() = runTest {
+        val cache = Caffeine.newBuilder()
+            .buildSuspending<String, String>(backgroundScope)
+        val exception: Throwable = object : Exception() {}
+        val result = runCatching {
+            cache.get("key") {
+                throw exception
+            }
+        }
+        assertEquals(exception, result.exceptionOrNull())
+    }
+
     @Test
     fun `should retry after failing request`() = runTest {
         val scope = CoroutineScope(backgroundScope.coroutineContext + SupervisorJob())
