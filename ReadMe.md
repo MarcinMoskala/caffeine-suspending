@@ -1,6 +1,6 @@
 # Wrapper over Caffeine cache library supporting suspending functions
 
-This library is a wrapper over [Caffeine](), a popular cache library. It adds support for suspending functions, so that you can use it with coroutines.
+This library is a wrapper over [Caffeine](https://github.com/ben-manes/caffeine), a popular cache library. It adds support for suspending functions, so that you can use it with coroutines.
 
 ## Usage
 
