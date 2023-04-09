@@ -1,3 +1,5 @@
+[![](https://jitpack.io/v/MarcinMoskala/caffeine-suspending.svg)](https://jitpack.io/#MarcinMoskala/caffeine-suspending)
+
 # Wrapper over Caffeine cache library supporting suspending functions
 
 This library is a wrapper over [Caffeine](), a popular cache library. It adds support for suspending functions, so that you can use it with coroutines.
@@ -15,25 +17,64 @@ val cache: SuspendingCache<String, String> = Caffeine.newBuilder()
 Then you can use it as a regular cache, but with suspending function `get`. It takes a key and a function that will be executed, if the key is not present in the cache. The function will be executed only once, even if there are multiple calls to `get` for the same key.
 
 ```kotlin
-var calledTimes = 0
-val result = cache.get(key) {
+var calls = 0
+suspend fun request(key: String): String {
+    calls++
     delay(1000)
-    calledTimes++
-    "ABC"
+    return "Result for $key"
 }
-println(result) // ABC
 
-val result2 = cache.get(key) {
-    calledTimes++
-    "ABC"
-}
+val result1 = cache.get("ABC", ::request)
 // (1 sec)
-println(result) // ABC
+println(result1) // Result for ABC
 
-println(calledTimes) // 1
+val result2 = cache.get("ABC", ::request)
+println(result2) // Result for ABC
+
+val result3 = cache.get("DEF", ::request)
+// (1 sec)
+println(result3) // Result for DEF
+
+println(calls) // 2
 ```
 
-Library also supports all the features of Caffeine, like expiration, refresh, etc.
+Library also supports all the features of Caffeine, like expiration time, refresh, etc.
+
+## Dependency
+
+[![](https://jitpack.io/v/MarcinMoskala/caffeine-suspending.svg)](https://jitpack.io/#MarcinMoskala/caffeine-suspending)
+
+Add the dependency in your module `build.gradle(.kts)`:
+
+```
+// build.gradle
+dependencies {
+    implementation 'com.github.MarcinMoskala:caffeine-suspending:<version>'
+}
+
+// build.gradle.kts
+dependencies {
+    implementation("com.github.MarcinMoskala:caffeine-suspending:<version>")
+}
+```
+
+Add it in your root `build.gradle(.kts)` at the repositories block:
+
+```
+// build.gradle
+repositories {
+    // ...
+    maven { url 'https://jitpack.io' }
+}
+
+// build.gradle.kts
+repositories {
+    // ...
+    maven {
+        url = uri("https://jitpack.io")
+    }
+}
+```
 
 ## Design choices
 

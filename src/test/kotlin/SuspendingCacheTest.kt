@@ -23,13 +23,36 @@ class SuspendingCacheTest {
         val value = cache.get("key") { "value" }
         assertEquals("value", value)
     }
-
+    
     @Test
     fun `should return value from cache after suspending`() = runTest {
         val value = cache.get("key") { "value" }
         assertEquals("value", value)
         val value2 = cache.get("key") { "value2" }
         assertEquals("value", value2)
+    }
+    
+    @Test
+    fun `should not make unnecessary calls`() = runTest {
+        var calls = 0
+        suspend fun request(key: String): String {
+            calls++
+            delay(1000)
+            return "Result for $key"
+        }
+        
+        val result1 = cache.get("ABC", ::request)
+        assertEquals(1000L, currentTime)
+        assertEquals("Result for ABC", result1)
+        
+        val result2 = cache.get("ABC", ::request)
+        assertEquals(1000L, currentTime)
+        assertEquals("Result for ABC", result2)
+        
+        val result3 = cache.get("DEF", ::request)
+        assertEquals(2000L, currentTime)
+        assertEquals("Result for DEF", result3)
+        assertEquals(2, calls)
     }
     
     @Test
@@ -96,7 +119,7 @@ class SuspendingCacheTest {
         assertEquals("Result(Request2)", res3.await())
         assertEquals(1500L, currentTime)
     }
-
+    
     @Test
     fun `should throw exception when failed`() = runTest {
         val exception: Throwable = object : Exception() {}
@@ -107,11 +130,11 @@ class SuspendingCacheTest {
         }
         assertEquals(exception, result.exceptionOrNull())
     }
-
+    
     @Test
     fun `should retry after failing request`() = runTest {
         val exception: Throwable = object : Exception() {}
-
+        
         val result1 = runCatching {
             cache.get("key") {
                 throw exception
@@ -126,11 +149,11 @@ class SuspendingCacheTest {
         }
         assertEquals("ABC", result2.getOrNull())
     }
-
+    
     @Test
     fun `should fail all requests waiting for response`() = runTest {
         val exception: Throwable = object : Exception() {}
-
+        
         launch {
             val result = runCatching {
                 cache.get("key") {
@@ -139,8 +162,9 @@ class SuspendingCacheTest {
                 }
             }
             assertEquals(exception, result.exceptionOrNull())
+            assertEquals(1000L, currentTime)
         }
-
+        
         delay(1)
         repeat(5) {
             launch {
@@ -148,6 +172,7 @@ class SuspendingCacheTest {
                     cache.get("key") { "ABC" }
                 }
                 assertEquals(exception, result.exceptionOrNull())
+                assertEquals(1000L, currentTime)
             }
         }
     }
