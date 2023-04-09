@@ -1,31 +1,41 @@
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
+import kotlinx.coroutines.*
 
 class SuspendingCache<P : Any, T>(
     private val delegate: Cache<P, Deferred<T>>,
-    private val scope: CoroutineScope,
 ) : Cache<P, Deferred<T>> by delegate {
-
-    suspend fun get(key: P, build: suspend (key: P) -> T): T {
-        val async = getAsync(key, build)
-        return if (async.isCancelled) {
-            invalidate(key)
-            getAsync(key, build).await()
-        } else {
+    
+    suspend fun get(key: P, build: suspend (key: P) -> T): T = supervisorScope {
+        fun getAsync() = delegate.get(key) { async { build(it) } }!!
+        var async: Deferred<T> = getAsync()
+        
+        if (async.isCancelled) {
+            if (coroutineContext.job.isCancelled) {
+                throw CancellationException()
+            } else {
+                invalidate(key)
+                async = getAsync()
+            }
+        }
+        
+        try {
             async.await()
+        } catch (e: CancellationException) {
+            get(key, build)
+        } catch (e: Throwable) {
+            invalidate(key)
+            throw e
         }
     }
-
-    private fun getAsync(key: P, build: suspend (key: P) -> T) = delegate
-        .get(key) { scope.async { build(it) } }!!
+    
+    override fun cleanUp() {
+        invalidateAll(delegate.asMap().filter { (_, v) -> v.isCancelled }.keys)
+        delegate.cleanUp()
+    }
 }
 
-inline fun <reified K: Any, reified V> Caffeine<in K, in Deferred<V>>.buildSuspending(
-    scope: CoroutineScope
-): SuspendingCache<K, V> {
+fun <K : Any, V> Caffeine<in K, in Deferred<V>>.buildSuspending(): SuspendingCache<K, V> {
     val delegate = build<K, Deferred<V>>()
-    return SuspendingCache(delegate, scope)
+    return SuspendingCache(delegate)
 }
