@@ -10,20 +10,20 @@ class SuspendingCache<P : Any, T>(
         fun getAsync() = delegate.get(key) { async { build(it) } }!!
         var async: Deferred<T> = getAsync()
         
+        // Failed request is not considered a valid cache entry
         if (async.isCancelled) {
-            if (coroutineContext.job.isCancelled) {
-                throw CancellationException()
-            } else {
-                invalidate(key)
-                async = getAsync()
-            }
+            invalidate(key)
+            async = getAsync()
         }
         
         try {
             async.await()
         } catch (e: CancellationException) {
+            ensureActive()
+            // Start again if cancellation was caused by a different caller
             get(key, build)
         } catch (e: Throwable) {
+            // Failed request is not considered a valid cache entry
             invalidate(key)
             throw e
         }
