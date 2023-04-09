@@ -1,3 +1,5 @@
+package com.marcinmoskala
+
 import com.github.benmanes.caffeine.cache.Caffeine
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.currentTime
