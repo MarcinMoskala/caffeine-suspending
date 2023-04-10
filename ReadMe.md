@@ -47,12 +47,7 @@ Library also supports all the features of Caffeine, like expiration time, refres
 Add the dependency in your module `build.gradle(.kts)`:
 
 ```
-// build.gradle
-dependencies {
-    implementation 'com.github.MarcinMoskala:caffeine-suspending:<version>'
-}
-
-// build.gradle.kts
+// build.gradle / build.gradle.kts
 dependencies {
     implementation("com.github.MarcinMoskala:caffeine-suspending:<version>")
 }
@@ -70,9 +65,7 @@ repositories {
 // build.gradle.kts
 repositories {
     // ...
-    maven {
-        url = uri("https://jitpack.io")
-    }
+    maven("https://jitpack.io")
 }
 ```
 
