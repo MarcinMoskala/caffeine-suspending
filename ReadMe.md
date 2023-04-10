@@ -69,6 +69,18 @@ repositories {
 }
 ```
 
+This library intentionally do not expose Caffeine as a transitive dependency, so each user can choose the version of Caffeine that he wants to use. That is why to use this library, you also need to add Caffeine dependency to your project:
+
+```
+dependencies {
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.5")
+}
+```
+
+## Why this library?
+
+There are no well implemented libraries that support suspending functions in cache. The most popular one is [Aedile](https://github.com/sksamuel/aedile), but is has essential design flaws. It does not support structured concurrency and cancellation, it starts its calls on an external scope instead of using caller scope. It is also bound to specific Caffeine version. 
+
 ## Design choices
 
 It is not an easy task to make proper design choices for a cache. My observation is, that most of the creators do not even consider most of the problems. I assume, that the typical use case is to have a cache for a remote resource (API or DB). Here are the most important problems worth considering, and my answers to them, that are implemented in this library:
