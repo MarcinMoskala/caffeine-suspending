@@ -1,43 +1,35 @@
 package com.marcinmoskala
 
+import com.github.benmanes.caffeine.cache.AsyncCache
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.future.asCompletableFuture
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.supervisorScope
 
 class SuspendingCache<P : Any, T>(
-    private val delegate: Cache<P, Deferred<T>>,
-) : Cache<P, Deferred<T>> by delegate {
-    
-    suspend fun get(key: P, build: suspend (key: P) -> T): T = supervisorScope {
-        fun getAsync() = delegate.get(key) { async { build(it) } }!!
-        var async: Deferred<T> = getAsync()
-        
-        // Failed request is not considered a valid cache entry
-        if (async.isCancelled) {
-            invalidate(key)
-            async = getAsync()
-        }
-        
+    private val delegate: AsyncCache<P, T>,
+) : Cache<P, T> by delegate.synchronous() {
+
+    suspend fun get(
+        key: P,
+        build: suspend (key: P) -> T
+    ): T = supervisorScope {
         try {
-            async.await()
-        } catch (e: CancellationException) {
+            delegate.get(key) { k, _ ->
+                async { build(k) }.asCompletableFuture()
+            }!!.await()
+        } catch (_: CancellationException) {
             ensureActive()
-            // Start again if cancellation was caused by a different caller
             get(key, build)
-        } catch (e: Throwable) {
-            // Failed request is not considered a valid cache entry
-            invalidate(key)
-            throw e
         }
-    }
-    
-    override fun cleanUp() {
-        invalidateAll(delegate.asMap().filter { (_, v) -> v.isCancelled }.keys)
-        delegate.cleanUp()
     }
 }
 
-fun <K : Any, V> Caffeine<in K, in Deferred<V>>.buildSuspending(): SuspendingCache<K, V> {
-    val delegate = build<K, Deferred<V>>()
+fun <K : Any, V> Caffeine<in K, in V>.buildSuspending(): SuspendingCache<K, V> {
+    val delegate = buildAsync<K, V>()
     return SuspendingCache(delegate)
 }

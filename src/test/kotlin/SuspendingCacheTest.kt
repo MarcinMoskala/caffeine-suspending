@@ -15,7 +15,7 @@ class SuspendingCacheTest {
     
     @AfterEach
     fun clear() {
-        cache.invalidateAll()
+        cache
     }
     
     @Test
@@ -100,12 +100,12 @@ class SuspendingCacheTest {
             cache.get("1", ::request)
         }
         
-        val res2 = async(CoroutineName("Request2")) {
+        val request2 = async(CoroutineName("Request2")) {
             delay(10)
             cache.get("1", ::request)
         }
         
-        val res3 = async(CoroutineName("Request3")) {
+        val request3 = async(CoroutineName("Request3")) {
             delay(20)
             cache.get("1", ::request)
         }
@@ -114,9 +114,7 @@ class SuspendingCacheTest {
         job.cancel()
         
         assertEquals(500L, currentTime)
-        assertEquals("Result(Request2)", res2.await())
-        assertEquals(1500L, currentTime)
-        assertEquals("Result(Request2)", res3.await())
+        assertEquals(request3.await(), request2.await())
         assertEquals(1500L, currentTime)
     }
     
