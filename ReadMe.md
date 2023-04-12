@@ -1,6 +1,6 @@
 [![](https://jitpack.io/v/MarcinMoskala/caffeine-suspending.svg)](https://jitpack.io/#MarcinMoskala/caffeine-suspending)
 
-# Wrapper over Caffeine cache library supporting suspending functions
+# Wrapper over Caffeine cache library supporting suspending functions with respect for structured concurrency
 
 This library is a wrapper over [Caffeine](), a popular cache library. It adds support for suspending functions, so that you can use it with coroutines.
 
