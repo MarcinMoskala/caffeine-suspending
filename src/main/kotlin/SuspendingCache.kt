@@ -27,6 +27,8 @@ class SuspendingCache<P : Any, T>(
             get(key, build)
         }
     }
+
+    fun asyncCache() = delegate
 }
 
 fun <K : Any, V> Caffeine<in K, in V>.buildSuspending(): SuspendingCache<K, V> {
