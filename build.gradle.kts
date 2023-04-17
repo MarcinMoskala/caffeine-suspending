@@ -26,6 +26,10 @@ application {
     mainClass.set("MainKt")
 }
 
+kotlin {
+    jvmToolchain(8)
+}
+
 java {
     withSourcesJar()
     withJavadocJar()
